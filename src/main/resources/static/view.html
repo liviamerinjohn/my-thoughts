@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Secure View - Self Destructing Note</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; line-height: 1.6; background-color: #f9f9f9; }
+
+        /* Anti-Copy CSS: Prevents text highlighting */
+        #content {
+            user-select: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            background: #fff;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            white-space: pre-wrap;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .timer-warning { color: #d9534f; font-weight: bold; margin-bottom: 10px; }
+        .error { color: #cc0000; font-weight: bold; }
+    </style>
+</head>
+<body oncontextmenu="return false;"> <h2>Confidential Message</h2>
+<div id="status">Checking note status...</div>
+<div id="timer" class="timer-warning" style="display:none"></div>
+<hr>
+<div id="content" style="display:none"></div>
+
+<script>
+    // Disable Keyboard Copy (Ctrl+C, Ctrl+U, Ctrl+S)
+    document.onkeydown = function(e) {
+        if (e.ctrlKey && (e.keyCode === 67 || e.keyCode === 85 || e.keyCode === 83 || e.keyCode === 73)) {
+            return false;
+        }
+    };
+
+    async function loadAndDecrypt() {
+        const params = new URLSearchParams(window.location.search);
+        const id = params.get('id');
+        const password = window.location.hash.substring(1);
+
+        if (!id || !password) {
+            document.getElementById('status').innerHTML = "<span class='error'>Invalid link format.</span>";
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/notes/${id}`);
+            if (!response.ok) throw new Error("This note has expired .");
+
+            const encryptedData = await response.text();
+
+            // Decrypt using the local # hash key
+            const bytes = CryptoJS.AES.decrypt(encryptedData, password);
+            const originalText = bytes.toString(CryptoJS.enc.Utf8);
+
+            if (!originalText) throw new Error("Decryption failed. The link might be corrupted.");
+
+            // Show content
+            document.getElementById('status').innerText = "Note loaded successfully:";
+            document.getElementById('timer').style.display = "block";
+            const contentDiv = document.getElementById('content');
+            contentDiv.innerText = originalText;
+            contentDiv.style.display = 'block';
+
+        } catch (err) {
+            document.getElementById('status').innerHTML = `<span class='error'>${err.message}</span>`;
+        }
+    }
+
+    loadAndDecrypt();
+</script>
+</body>
+</html>

@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>SpringPriv - Secret Notes</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <style>
+        body { font-family: sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; line-height: 1.6; }
+        textarea { width: 100%; height: 150px; margin-bottom: 10px; }
+        .result { background: #f4f4f4; padding: 10px; word-break: break-all; border: 1px solid #ddd; }
+    </style>
+</head>
+<body>
+<h2>Create a Secret Note</h2>
+<textarea id="text" placeholder="Write your passage here..."></textarea><br>
+<button onclick="createNote()">Create Secure Link</button>
+
+<div id="linkArea" style="display:none">
+    <p>Share this link (It will self-destruct after one view):</p>
+    <div class="result" id="shareLink"></div>
+</div>
+
+<script>
+    async function createNote() {
+        const text = document.getElementById('text').value;
+        const password = Math.random().toString(36).slice(-8); // Random key
+
+        // 1. Encrypt text locally
+        const encrypted = CryptoJS.AES.encrypt(text, password).toString();
+
+        // 2. Send only encrypted text to Spring Boot
+        const response = await fetch('/api/notes', {
+            method: 'POST',
+            headers: {'Content-Type': 'text/plain'},
+            body: encrypted
+        });
+        const noteId = await response.text();
+
+        // 3. Generate Link (ID for server, Password after # for browser only)
+        const link = `${window.location.origin}/view.html?id=${noteId}#${password}`;
+        document.getElementById('shareLink').innerText = link;
+        document.getElementById('linkArea').style.display = 'block';
+    }
+</script>
+</body>
+</html>
