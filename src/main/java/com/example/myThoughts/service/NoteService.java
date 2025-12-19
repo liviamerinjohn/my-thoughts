@@ -24,26 +24,24 @@ public class NoteService {
     @Transactional
     public String getOrUpdateExpiry(String id) {
         Optional<Note> noteOpt = repository.findById(id);
-        if (noteOpt.isEmpty()) {
-            return null;
-        }
+        if (noteOpt.isEmpty()) return null;
 
         Note note = noteOpt.get();
         Instant now = Instant.now();
 
-        // 1. If it's the first time being opened
+        // Condition 1: If it was NEVER opened before
         if (note.getFirstOpenedAt() == null) {
+            // Mark the opening time
             note.setFirstOpenedAt(now);
-            repository.save(note); // Start the timer
+            repository.saveAndFlush(note);
             return note.getEncryptedContent();
         }
 
-        // 2. If already opened, check if 5 minutes have passed
-        // We use ChronoUnit.MINUTES to check the difference between the two Instants
-        long minutesElapsed = ChronoUnit.MINUTES.between(note.getFirstOpenedAt(), now);
-
-        if (minutesElapsed >= 30) {
-            repository.delete(note); // Expired
+        // Condition 2: If it was ALREADY opened (Refresh)
+        // OR if it's past 5 minutes since the first opening
+        if (now.isAfter(note.getFirstOpenedAt().plus(5, ChronoUnit.MINUTES)) || note.getFirstOpenedAt() != null) {
+            repository.delete(note);
+            repository.flush();
             return null;
         }
 

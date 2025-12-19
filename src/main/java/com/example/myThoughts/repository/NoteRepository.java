@@ -1,9 +1,10 @@
 package com.example.myThoughts.repository;
 
 import com.example.myThoughts.model.Note;
-import org.springframework.data.repository.CrudRepository;
+import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface NoteRepository extends CrudRepository<Note, String> {
+public interface NoteRepository extends JpaRepository<Note, String> {
+
 }
